@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -17,7 +18,7 @@ class Program
         int port = int.Parse(Console.ReadLine());
 
         // Создаем список клиентов
-        var clients = new List<TcpClient>();
+        var clients = new ConcurrentBag<TcpClient>();
 
         // Создаем новый поток для прослушивания входящих сообщений
         Thread listenerThread = new Thread(() =>
@@ -28,39 +29,55 @@ class Program
             while (true)
             {
                 TcpClient client = listener.AcceptTcpClient();
-                Console.WriteLine(client);
 
                 // Добавляем клиента в список клиентов
                 Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
 
-                // Создаем новый поток для обработки сообщения
+                // Создаем новый поток для обработки сообщений
                 Thread handleThread = new Thread(() =>
                 {
-                    NetworkStream stream = client.GetStream();
-
-                    byte[] buffer = new byte[client.ReceiveBufferSize];
-                    int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
-                    string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                    Console.WriteLine(message);
-                    Regex regex = new Regex(@"Клиент подключился с портом (\d+)");
-                    Match match = regex.Match(message);
-                    if (match.Success)
+                    try
                     {
-                        int newClientPort = int.Parse(match.Groups[1].Value);
-                        try
+                        NetworkStream stream = client.GetStream();
+
+                        while (client.Connected) // Цикл для обработки сообщений до отключения клиента
                         {
-                            TcpClient newClient = new TcpClient();
-                            client.Connect("localhost", newClientPort); // Устанавливаем соединение с хостом и портом
-                            clients.Add(client); // Добавляем клиента в список
-                        }
-                        catch (Exception e)
-                        {
-                            // Обработка ошибок
+                            byte[] buffer = new byte[client.ReceiveBufferSize];
+                            int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
+                            if (bytesRead == 0)
+                            {
+                                // Если клиент отключился, выходим из цикла
+                                break;
+                            }
+                            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                            Console.WriteLine(message);
+                            Regex regex = new Regex(@"Client connected with port (\d+)");
+                            Match match = regex.Match(message);
+                            if (match.Success)
+                            {
+                                int newClientPort = int.Parse(match.Groups[1].Value);
+                                try
+                                {
+                                    TcpClient newClient = new TcpClient();
+                                    newClient.Connect("localhost", newClientPort); // Устанавливаем соединение с хостом и портом
+                                    clients.Add(newClient); // Добавляем клиента в список
+                                }
+                                catch (Exception e)
+                                {
+                                    // Обработка ошибок
+                                }
+                            }
                         }
                     }
-                    Console.WriteLine(message);
-
-                    client.Close();
+                    catch (Exception e)
+                    {
+                        // Обработка ошибок
+                    }
+                    finally
+                    {
+                        // Закрываем клиентский сокет после обработки сообщений
+                        client.Close();
+                    }
                 });
                 handleThread.Start();
             }
@@ -78,8 +95,9 @@ class Program
             {
                 TcpClient client = new TcpClient();
                 client.Connect("localhost", remotePort); // Устанавливаем соединение с хостом и портом
+                clients.Add(client); // Добавляем клиента в список
                 NetworkStream stream = client.GetStream();
-                byte[] messageBytes = Encoding.ASCII.GetBytes("Клиент подключился с портом " + port);
+                byte[] messageBytes = Encoding.ASCII.GetBytes("Client connected with port " + port);
                 stream.Write(messageBytes, 0, messageBytes.Length);
             }
             catch (Exception e)
@@ -94,7 +112,6 @@ class Program
             // Отправляем сообщение всем доступным клиентам
             foreach (var client in clients)
             {
-                Console.WriteLine(client);
                 try
                 {
                     NetworkStream stream = client.GetStream();
