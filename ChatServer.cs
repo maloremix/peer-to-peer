@@ -10,7 +10,7 @@ class ChatServer : IChatServer
 {
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
-    private ClientProcessor clientProccessor;
+    private IClientProcessor clientProccessor;
 
     public ChatServer()
     {
