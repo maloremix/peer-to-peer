@@ -14,8 +14,24 @@ class Program
     static void Main(string[] args)
     {
         // Запрашиваем у пользователя номер порта для подключения
-        Console.Write("Введите номер порта: ");
-        int port = int.Parse(Console.ReadLine());
+        // Находим доступный порт
+        int port = 0;
+        for (int i = 5000; i <= 5020; i++)
+        {
+            try
+            {
+                TcpListener listener = new TcpListener(IPAddress.Any, i);
+                listener.Start();
+                port = i;
+                Console.WriteLine($"Прослушивание входящих сообщений на порту {port}");
+                listener.Stop(); // закрываем TcpListener
+                break; // выходим из цикла, т.к. нашли свободный порт
+            }
+            catch
+            {
+                // Порт занят, переходим к следующему порту
+            }
+        }
 
         // Создаем список клиентов
         var clients = new ConcurrentBag<TcpClient>();
