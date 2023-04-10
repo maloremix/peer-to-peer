@@ -43,6 +43,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChatServer.cs" />
+    <Compile Include="ClientProcessor.cs" />
+    <Compile Include="IChatServer.cs" />
+    <Compile Include="IClientProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
