@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -13,6 +14,8 @@ class Program
 {
     static void Main(string[] args)
     {
+        string login = ""; //логин клиента
+
         // Запрашиваем у пользователя номер порта для подключения
         // Находим доступный порт
         int port = 0;
@@ -35,6 +38,7 @@ class Program
 
         // Создаем список клиентов
         var clients = new ConcurrentBag<TcpClient>();
+        var logins = new ConcurrentBag<string>();
 
         // Создаем новый поток для прослушивания входящих сообщений
         Thread listenerThread = new Thread(() =>
@@ -77,11 +81,21 @@ class Program
                                     TcpClient newClient = new TcpClient();
                                     newClient.Connect("localhost", newClientPort); // Устанавливаем соединение с хостом и портом
                                     clients.Add(newClient); // Добавляем клиента в список
+                                    NetworkStream streamLogin = newClient.GetStream();
+                                    byte[] messageBytes = Encoding.ASCII.GetBytes("login " + login);
+                                    streamLogin.Write(messageBytes, 0, messageBytes.Length);
                                 }
                                 catch (Exception e)
                                 {
                                     // Обработка ошибок
                                 }
+                            }
+                            Regex regexLogin = new Regex(@"login (\w+)");
+                            Match matchLogin = regexLogin.Match(message);
+                            if (matchLogin.Success)
+                            {
+                                string clientLogin = matchLogin.Groups[1].Value;
+                                logins.Add(clientLogin);
                             }
                         }
                     }
@@ -120,6 +134,18 @@ class Program
             {
                 // Обработка ошибок
             }
+        }
+
+        while (logins.Count != clients.Count)
+        {
+            Thread.Sleep(100);
+        }
+
+        Console.WriteLine("Введите логин: ");
+
+        while (logins.Contains(login = Console.ReadLine())){
+            Console.WriteLine("Данный логин уже используется");
+            Console.WriteLine("Введите логин еще раз: ");
         }
 
         string line;
