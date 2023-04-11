@@ -8,7 +8,6 @@ namespace ConsoleApp8
 {
     public interface IClientProcessor
     {
-        string login { get; set; }
         void Handshake(int port);
         void BroadcastMessage(string message);
         void StartChatting();
@@ -16,5 +15,6 @@ namespace ConsoleApp8
         void WriteIntoFile(string message);
         void SetStartLogin();
         void DeleteMessageById(int id);
+        string GetLogin();
     }
 }

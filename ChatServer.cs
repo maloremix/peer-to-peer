@@ -71,7 +71,7 @@ class ChatServer : IChatServer
                             {
                                 break;
                             }
-                            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                            string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                             Regex regex = new Regex(@"Client connected with port (\d+)");
                             Match match = regex.Match(message);
                             if (match.Success)
@@ -83,7 +83,7 @@ class ChatServer : IChatServer
                                     newClient.Connect("localhost", newClientPort);
                                     clients.Add(newClient);
                                     NetworkStream streamLogin = newClient.GetStream();
-                                    byte[] messageBytes = Encoding.ASCII.GetBytes("login " + clientProccessor.login);
+                                    byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
                                     streamLogin.Write(messageBytes, 0, messageBytes.Length);
                                 }
                                 catch (Exception e)

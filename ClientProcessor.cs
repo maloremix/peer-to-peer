@@ -10,7 +10,7 @@ using System.Threading;
 
 public class ClientProcessor : IClientProcessor
 {
-    public string login { get; set; }
+    private string Login;
 
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
@@ -22,6 +22,10 @@ public class ClientProcessor : IClientProcessor
         this.logins = logins;
     }
 
+    public string GetLogin()
+    {
+        return Login;
+    }
     public void Handshake(int port)
     {
         // Производим хендшейк с каждым портом от 5000 до 5020
@@ -37,7 +41,7 @@ public class ClientProcessor : IClientProcessor
                 client.Connect("localhost", remotePort); // Устанавливаем соединение с хостом и портом
                 clients.Add(client); // Добавляем клиента в список
                 NetworkStream stream = client.GetStream();
-                byte[] messageBytes = Encoding.ASCII.GetBytes("Client connected with port " + port);
+                byte[] messageBytes = Encoding.UTF8.GetBytes("Client connected with port " + port);
                 stream.Write(messageBytes, 0, messageBytes.Length);
             }
             catch (Exception e)
@@ -49,7 +53,7 @@ public class ClientProcessor : IClientProcessor
 
     public void SetStartLogin()
     {
-        login = Console.ReadLine();
+        Login = Console.ReadLine();
         Console.WriteLine("Устанавливается соединение с другими клиентами...");
     }
 
@@ -60,7 +64,7 @@ public class ClientProcessor : IClientProcessor
             try
             {
                 NetworkStream stream = client.GetStream();
-                byte[] messageBytes = Encoding.ASCII.GetBytes(message);
+                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
                 stream.Write(messageBytes, 0, messageBytes.Length);
             }
             catch (Exception e)
@@ -99,7 +103,7 @@ public class ClientProcessor : IClientProcessor
 
     public void WriteIntoConsoleAndFile(string message)
     {
-        string refactorMessage = $"[{DateTime.Now}] {login}[{LastId}]: \"{message}\"";
+        string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{message}\"";
         Console.WriteLine(refactorMessage);
         Writer.Write(refactorMessage);
         Writer.Flush();
@@ -107,7 +111,7 @@ public class ClientProcessor : IClientProcessor
     }
     public void WriteIntoFile(string message)
     {
-        string refactorMessage = $"[{DateTime.Now}] {login}[{LastId}]: \"{message}\"";
+        string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{message}\"";
         Writer.Write(refactorMessage);
         Writer.Flush();
         LastId++;
@@ -116,8 +120,8 @@ public class ClientProcessor : IClientProcessor
     public void DeleteMessageById(int id)
     {
         Writer.Dispose();
-        string filePath = $"{login}.dat";
-        string tempFilePath = $"{login}_temp.dat";
+        string filePath = $"{Login}.dat";
+        string tempFilePath = $"{Login}_temp.dat";
 
         if (File.Exists(filePath))
         {
@@ -151,7 +155,7 @@ public class ClientProcessor : IClientProcessor
             // Удаляем старый файл и переименовываем временный файл
             File.Delete(filePath);
             File.Move(tempFilePath, filePath);
-            Writer = new BinaryWriter(new FileStream($"{login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
+            Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
         }
     }
 
@@ -161,18 +165,18 @@ public class ClientProcessor : IClientProcessor
         {
             Thread.Sleep(100);
         }
-        while (logins.Contains(login))
+        while (logins.Contains(Login))
         {
             Console.WriteLine("Данный логин уже используется");
             Console.WriteLine("Введите логин еще раз: ");
-            login = Console.ReadLine();
+            Login = Console.ReadLine();
         }
 
         Console.WriteLine("Соединение установлено");
 
-        readHistory(login);
+        readHistory(Login);
 
-        Writer = new BinaryWriter(new FileStream($"{login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
+        Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
 
         string line;
         while ((line = Console.ReadLine()) != "exit")
