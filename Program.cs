@@ -3,15 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleApp8
 {
     internal class Program
     {
+        static ServiceProvider serviceProvider;
         static void Main(string[] args)
         {
-            ChatServer server = new ChatServer();
-            server.Start();
+            serviceProvider = new ServiceCollection()
+                .AddSingleton<IClientProcessor, ClientProcessor>()
+                .AddSingleton<IChatServer, ChatServer>()
+                .BuildServiceProvider();
+
+            var chatServer = serviceProvider.GetService<IChatServer>();
+            chatServer.Start();
         }
     }
 }

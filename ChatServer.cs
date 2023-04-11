@@ -44,6 +44,8 @@ class ChatServer : IChatServer
     public void Start()
     {
         int port = GetFreePort();
+        Console.WriteLine("Введите логин: ");
+        clientProccessor.SetStartLogin();
         Thread listenerThread = new Thread(() =>
         {
             TcpListener listener = new TcpListener(IPAddress.Any, port);
@@ -70,7 +72,6 @@ class ChatServer : IChatServer
                                 break;
                             }
                             string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                            Console.WriteLine(message);
                             Regex regex = new Regex(@"Client connected with port (\d+)");
                             Match match = regex.Match(message);
                             if (match.Success)
@@ -90,12 +91,18 @@ class ChatServer : IChatServer
                                     // Обработка ошибок
                                 }
                             }
-                            Regex regexLogin = new Regex(@"login (\w+)");
-                            Match matchLogin = regexLogin.Match(message);
-                            if (matchLogin.Success)
+                            else
                             {
-                                string clientLogin = matchLogin.Groups[1].Value;
-                                logins.Add(clientLogin);
+                                Regex regexLogin = new Regex(@"login (\w+)");
+                                Match matchLogin = regexLogin.Match(message);
+                                if (matchLogin.Success)
+                                {
+                                    string clientLogin = matchLogin.Groups[1].Value;
+                                    logins.Add(clientLogin);
+                                } else
+                                {
+                                    clientProccessor.WriteIntoConsoleAndFile(message);
+                                }
                             }
                         }
                     }
@@ -112,7 +119,7 @@ class ChatServer : IChatServer
             }
         });
         listenerThread.Start();
-        clientProccessor.handshake(port);
-        clientProccessor.startChatting();
+        clientProccessor.Handshake(port);
+        clientProccessor.StartChatting();
     }
 }

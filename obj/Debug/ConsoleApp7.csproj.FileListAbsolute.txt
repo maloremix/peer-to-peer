@@ -6,3 +6,14 @@ C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\obj\Debug\Cons
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\obj\Debug\ConsoleApp7.csproj.CoreCompileInputs.cache
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\obj\Debug\ConsoleApp7.exe
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\obj\Debug\ConsoleApp7.pdb
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Bcl.AsyncInterfaces.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Runtime.CompilerServices.Unsafe.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Threading.Tasks.Extensions.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Bcl.AsyncInterfaces.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Extensions.DependencyInjection.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Microsoft.Extensions.DependencyInjection.Abstractions.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Runtime.CompilerServices.Unsafe.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Threading.Tasks.Extensions.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\obj\Debug\ConsoleApp7.csproj.CopyComplete
