@@ -103,16 +103,14 @@ public class ClientProcessor : IClientProcessor
 
     public void WriteIntoConsoleAndFile(string message)
     {
-        string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{message}\"";
-        Console.WriteLine(refactorMessage);
-        Writer.Write(refactorMessage);
+        Console.WriteLine(message);
+        Writer.Write(message);
         Writer.Flush();
         LastId++;
     }
     public void WriteIntoFile(string message)
     {
-        string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{message}\"";
-        Writer.Write(refactorMessage);
+        Writer.Write(message);
         Writer.Flush();
         LastId++;
     }
@@ -191,8 +189,9 @@ public class ClientProcessor : IClientProcessor
             else
             {
                 // Отправляем сообщение всем доступным клиентам
-                BroadcastMessage(line);
-                WriteIntoFile(line);
+                string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{line}\"";
+                BroadcastMessage(refactorMessage);
+                WriteIntoFile(refactorMessage);
             }
         }
     }
