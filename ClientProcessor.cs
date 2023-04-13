@@ -28,6 +28,11 @@ public class ClientProcessor : IClientProcessor
     {
         return Login;
     }
+    
+    public int GetLastId()
+    {
+        return LastId;
+    }
     public void Handshake(int port)
     {
         var firstChatPort = 5000;
@@ -70,16 +75,9 @@ public class ClientProcessor : IClientProcessor
     {
         foreach (var client in clients)
         {
-            try
-            {
-                NetworkStream stream = client.GetStream();
-                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-                stream.Write(messageBytes, 0, messageBytes.Length);
-            }
-            catch (Exception e)
-            {
-                // Обработка ошибок
-            }
+            NetworkStream stream = client.GetStream();
+            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+            stream.Write(messageBytes, 0, messageBytes.Length);
         }
     }
 
@@ -113,15 +111,9 @@ public class ClientProcessor : IClientProcessor
             }
         }
     }
-
-    // TODO разбить логику отображения и записи сообщений в хранилище
-    public void WriteIntoConsoleAndFile(string message)
+    public void WriteIntoConsole(string message)
     {
-        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + LastId.ToString() + "]");
-        Console.WriteLine(refactorMessage);
-        Writer.Write(refactorMessage);
-        Writer.Flush();
-        LastId++;
+        Console.WriteLine(message);
     }
     public void WriteIntoFile(string message)
     {
@@ -179,6 +171,7 @@ public class ClientProcessor : IClientProcessor
         {
             Thread.Sleep(100);
         }
+        Console.WriteLine("Соединение установлено");
         while (logins.Contains(Login))
         {
             Console.WriteLine("Данный логин уже используется");
@@ -186,10 +179,9 @@ public class ClientProcessor : IClientProcessor
             Login = Console.ReadLine();
         }
 
-        Console.WriteLine("Соединение установлено");
-        SayLogin();
-
         readHistory(Login);
+
+        SayLogin();
 
         Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
 

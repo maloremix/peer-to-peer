@@ -41,19 +41,12 @@ class ChatServer : IChatServer
 
     private void HandleNewClientMessage(string newClientPort)
     {
-        try
-        {
             TcpClient newClient = new TcpClient();
             newClient.Connect("localhost", int.Parse(newClientPort));
             clientProccessor.AddClient(newClient);
             NetworkStream streamLogin = newClient.GetStream();
             byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
             streamLogin.Write(messageBytes, 0, messageBytes.Length);
-        }
-        catch (Exception e)
-        {
-            // Обработка ошибок
-        }
     }
 
     public void Start()
@@ -68,71 +61,61 @@ class ChatServer : IChatServer
             listener.Start();
 
             List<TcpClient> listeningClients = new List<TcpClient>();
-
             while (true)
             {
-                TcpClient client = listener.AcceptTcpClient();
-                
-                
-                
-                
-
-                // TODO не создавать поток под каждого клиента. Один поток должен работать со всеми клиентами
-                Thread handleThread = new Thread(() =>
+                // Принимаем новых клиентов и добавляем их в список
+                if (listener.Pending())
                 {
-                    try
-                    {
-                        NetworkStream stream = client.GetStream();
-                        
-                        while (client.Connected)
-                        {
-                            while (true)
-                            {
-                                byte[] buffer = new byte[client.ReceiveBufferSize];
-                                int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
-                                if (bytesRead == 0)
-                                {
-                                    break;
-                                }
-                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                Regex regex = new Regex(@"Client connected with port (\d+)");
-                                Match match = regex.Match(message);
-                                if (match.Success)
-                                {
-                                    HandleNewClientMessage(match.Groups[1].Value);
-                                    continue;
-                                }
-                                Regex regexLogin = new Regex(@"login (\w+)");
-                                Match matchLogin = regexLogin.Match(message);
-                                if (matchLogin.Success)
-                                {
-                                    Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
-                                    string clientLogin = matchLogin.Groups[1].Value;
-                                    clientProccessor.AddLogin(clientLogin);
-                                    continue;
-                                }
-                                Regex regexLoginFrom = new Regex(@"Client connected with login (\w+)");
-                                Match matchLoginFrom = regexLoginFrom.Match(message);
-                                if (matchLoginFrom.Success)
-                                {
-                                    Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
-                                    continue;
-                                }
+                    TcpClient client = listener.AcceptTcpClient();
+                    listeningClients.Add(client);
+                }
 
-                                clientProccessor.WriteIntoConsoleAndFile(message);
-                            }
+                // Обрабатываем данные от всех клиентов в списке
+                foreach (TcpClient client in listeningClients)
+                {
+                    NetworkStream stream = client.GetStream();
+
+                    // Если есть данные для чтения, обрабатываем их
+                    if (stream.DataAvailable)
+                    {
+                        byte[] buffer = new byte[client.ReceiveBufferSize];
+                        int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
+                        if (bytesRead == 0)
+                        {
+                            break;
                         }
+                        string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                        Regex regex = new Regex(@"Client connected with port (\d+)");
+                        Match match = regex.Match(message);
+                        if (match.Success)
+                        {
+                            HandleNewClientMessage(match.Groups[1].Value);
+                            continue;
+                        }
+                        Regex regexLogin = new Regex(@"login (\w+)");
+                        Match matchLogin = regexLogin.Match(message);
+                        if (matchLogin.Success)
+                        {
+                            Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
+                            string clientLogin = matchLogin.Groups[1].Value;
+                            clientProccessor.AddLogin(clientLogin);
+                            continue;
+                        }
+                        Regex regexLoginFrom = new Regex(@"Client connected with login (\w+)");
+                        Match matchLoginFrom = regexLoginFrom.Match(message);
+                        if (matchLoginFrom.Success)
+                        {
+                            Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
+                            continue;
+                        }
+                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + clientProccessor.GetLastId().ToString() + "]");
+                        clientProccessor.WriteIntoConsole(refactorMessage);
+                        clientProccessor.WriteIntoFile(refactorMessage);
                     }
-                    catch (Exception e)
-                    {
-                        // Обработка ошибок
-                    }
-                    finally
-                    {
-                        client.Close();
-                    }
-                });
-                handleThread.Start();
+                }
+
+                // Удаляем отключившихся клиентов из списка
+                listeningClients.RemoveAll(c => !c.Connected);
             }
         });
         listenerThread.Start();
