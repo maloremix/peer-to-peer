@@ -21,10 +21,10 @@ public class ClientProcessor : IClientProcessor
     // TODO убрать из аргументов конструктора ConcurrentBag<TcpClient> clients и ConcurrentBag<string> logins
     // так как они не дают правильно прокинуть ClientProcessor в ChatServer из-за того, что параметры конструктора
     // ClientProcessor не представлены в сервисной коллекции
-    public ClientProcessor(ConcurrentBag<TcpClient> clients, ConcurrentBag<string> logins)
+    public ClientProcessor()
     {
-        this.clients = clients;
-        this.logins = logins;
+        clients = new ConcurrentBag<TcpClient>();
+        logins = new ConcurrentBag<string>();
     }
 
     public string GetLogin()
@@ -51,6 +51,16 @@ public class ClientProcessor : IClientProcessor
             byte[] messageBytes = Encoding.UTF8.GetBytes("Client connected with port " + port);
             stream.Write(messageBytes, 0, messageBytes.Length);
         }
+    }
+
+    public void AddClient(TcpClient client)
+    {
+        clients.Add(client);
+    }
+
+    public void AddLogin(string login)
+    {
+        logins.Add(login);
     }
 
     public void SetStartLogin()
@@ -107,8 +117,9 @@ public class ClientProcessor : IClientProcessor
     // TODO разбить логику отображения и записи сообщений в хранилище
     public void WriteIntoConsoleAndFile(string message)
     {
-        Console.WriteLine(message);
-        Writer.Write(message);
+        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + LastId.ToString() + "]");
+        Console.WriteLine(refactorMessage);
+        Writer.Write(refactorMessage);
         Writer.Flush();
         LastId++;
     }

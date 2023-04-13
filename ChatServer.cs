@@ -10,16 +10,12 @@ using System.Text.RegularExpressions;
 using System.Threading;
 class ChatServer : IChatServer
 {
-    private ConcurrentBag<TcpClient> clients;
-    private ConcurrentBag<string> logins;
     private IClientProcessor clientProccessor;
 
-    public ChatServer()
+    public ChatServer(IClientProcessor clientProcessor)
     {
         // TODO не использовать clients и logins в ChatServer. Вынести работу с этими коллекциями в ClientProcessor
-        clients = new ConcurrentBag<TcpClient>();
-        logins = new ConcurrentBag<string>();
-        clientProccessor = new ClientProcessor(clients, logins);
+        clientProccessor = clientProcessor;
     }
 
     // TODO сделать приватным
@@ -93,7 +89,7 @@ class ChatServer : IChatServer
                                 {
                                     TcpClient newClient = new TcpClient();
                                     newClient.Connect("localhost", newClientPort);
-                                    clients.Add(newClient);
+                                    clientProccessor.AddClient(newClient);
                                     NetworkStream streamLogin = newClient.GetStream();
                                     byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
                                     streamLogin.Write(messageBytes, 0, messageBytes.Length);
@@ -110,7 +106,7 @@ class ChatServer : IChatServer
                                 if (matchLogin.Success)
                                 {
                                     string clientLogin = matchLogin.Groups[1].Value;
-                                    logins.Add(clientLogin);
+                                    clientProccessor.AddLogin(clientLogin);
                                 } else
                                 {
                                     clientProccessor.WriteIntoConsoleAndFile(message);
