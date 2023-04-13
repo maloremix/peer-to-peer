@@ -175,10 +175,10 @@ public class ClientProcessor : IClientProcessor
     public void StartChatting()
     {
         // TODO подумать над тем, как исправить эту логику
-        //while (logins.Count != clients.Count)
-        //{
-        //    Thread.Sleep(100);
-        //}
+        while (logins.Count != clients.Count)
+        {
+            Thread.Sleep(100);
+        }
         while (logins.Contains(Login))
         {
             Console.WriteLine("Данный логин уже используется");

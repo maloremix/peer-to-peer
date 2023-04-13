@@ -1,6 +1,7 @@
 ﻿using ConsoleApp8;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -65,6 +66,8 @@ class ChatServer : IChatServer
         {
             TcpListener listener = new TcpListener(IPAddress.Any, port);
             listener.Start();
+
+            List<TcpClient> listeningClients = new List<TcpClient>();
 
             while (true)
             {
