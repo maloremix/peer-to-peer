@@ -16,11 +16,13 @@ class ChatServer : IChatServer
 
     public ChatServer()
     {
+        // TODO не использовать clients и logins в ChatServer. Вынести работу с этими коллекциями в ClientProcessor
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
         clientProccessor = new ClientProcessor(clients, logins);
     }
 
+    // TODO сделать приватным
     public int GetFreePort()
     {
         var firstChatPort = 5000;
@@ -46,6 +48,7 @@ class ChatServer : IChatServer
     public void Start()
     {
         int port = GetFreePort();
+        // TODO строку 52 вынести в метод clientProccessor.SetStartLogin
         Console.WriteLine("Введите логин: ");
         clientProccessor.SetStartLogin();
         Thread listenerThread = new Thread(() =>
@@ -56,15 +59,22 @@ class ChatServer : IChatServer
             while (true)
             {
                 TcpClient client = listener.AcceptTcpClient();
+                
+                
+                
+                
 
-                Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
-
+                // TODO не создавать поток под каждого клиента. Один поток должен работать со всеми клиентами
                 Thread handleThread = new Thread(() =>
                 {
                     try
                     {
                         NetworkStream stream = client.GetStream();
 
+                        
+                        // TODO выводить при подключении нового пользователя его логин, а не ip адрес
+                        Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
+                        
                         while (client.Connected)
                         {
                             byte[] buffer = new byte[client.ReceiveBufferSize];

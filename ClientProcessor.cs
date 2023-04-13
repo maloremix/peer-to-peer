@@ -17,6 +17,10 @@ public class ClientProcessor : IClientProcessor
     private ConcurrentBag<string> logins;
     private BinaryWriter Writer;
     private int LastId = 1;
+    
+    // TODO убрать из аргументов конструктора ConcurrentBag<TcpClient> clients и ConcurrentBag<string> logins
+    // так как они не дают правильно прокинуть ClientProcessor в ChatServer из-за того, что параметры конструктора
+    // ClientProcessor не представлены в сервисной коллекции
     public ClientProcessor(ConcurrentBag<TcpClient> clients, ConcurrentBag<string> logins)
     {
         this.clients = clients;
@@ -52,6 +56,7 @@ public class ClientProcessor : IClientProcessor
     public void SetStartLogin()
     {
         Login = Console.ReadLine();
+        // TODO строку 56 вынести после вызова clientProccessor.SetStartLogin();
         Console.WriteLine("Устанавливается соединение с другими клиентами...");
     }
 
@@ -99,6 +104,7 @@ public class ClientProcessor : IClientProcessor
         }
     }
 
+    // TODO разбить логику отображения и записи сообщений в хранилище
     public void WriteIntoConsoleAndFile(string message)
     {
         Console.WriteLine(message);
@@ -157,6 +163,7 @@ public class ClientProcessor : IClientProcessor
 
     public void StartChatting()
     {
+        // TODO подумать над тем, как исправить эту логику
         while (logins.Count != clients.Count)
         {
             Thread.Sleep(100);
