@@ -14,12 +14,9 @@ class ChatServer : IChatServer
 
     public ChatServer(IClientProcessor clientProcessor)
     {
-        // TODO не использовать clients и logins в ChatServer. Вынести работу с этими коллекциями в ClientProcessor
         clientProccessor = clientProcessor;
     }
-
-    // TODO сделать приватным
-    public int GetFreePort()
+    private int GetFreePort()
     {
         var firstChatPort = 5000;
         var lastChatPort = 5020;
@@ -41,12 +38,29 @@ class ChatServer : IChatServer
         return 0;
     }
 
+    private void HandleNewClientMessage(string newClientPort)
+    {
+        try
+        {
+            TcpClient newClient = new TcpClient();
+            newClient.Connect("localhost", int.Parse(newClientPort));
+            clientProccessor.AddClient(newClient);
+            NetworkStream streamLogin = newClient.GetStream();
+            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
+            streamLogin.Write(messageBytes, 0, messageBytes.Length);
+        }
+        catch (Exception e)
+        {
+            // Обработка ошибок
+        }
+    }
+
     public void Start()
     {
         int port = GetFreePort();
-        // TODO строку 52 вынести в метод clientProccessor.SetStartLogin
-        Console.WriteLine("Введите логин: ");
+
         clientProccessor.SetStartLogin();
+        Console.WriteLine("Устанавливается соединение с другими клиентами...");
         Thread listenerThread = new Thread(() =>
         {
             TcpListener listener = new TcpListener(IPAddress.Any, port);
@@ -66,51 +80,43 @@ class ChatServer : IChatServer
                     try
                     {
                         NetworkStream stream = client.GetStream();
-
-                        
-                        // TODO выводить при подключении нового пользователя его логин, а не ip адрес
-                        Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
                         
                         while (client.Connected)
                         {
-                            byte[] buffer = new byte[client.ReceiveBufferSize];
-                            int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
-                            if (bytesRead == 0)
+                            while (true)
                             {
-                                break;
-                            }
-                            string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                            Regex regex = new Regex(@"Client connected with port (\d+)");
-                            Match match = regex.Match(message);
-                            if (match.Success)
-                            {
-                                int newClientPort = int.Parse(match.Groups[1].Value);
-                                try
+                                byte[] buffer = new byte[client.ReceiveBufferSize];
+                                int bytesRead = stream.Read(buffer, 0, client.ReceiveBufferSize);
+                                if (bytesRead == 0)
                                 {
-                                    TcpClient newClient = new TcpClient();
-                                    newClient.Connect("localhost", newClientPort);
-                                    clientProccessor.AddClient(newClient);
-                                    NetworkStream streamLogin = newClient.GetStream();
-                                    byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
-                                    streamLogin.Write(messageBytes, 0, messageBytes.Length);
+                                    break;
                                 }
-                                catch (Exception e)
+                                string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                                Regex regex = new Regex(@"Client connected with port (\d+)");
+                                Match match = regex.Match(message);
+                                if (match.Success)
                                 {
-                                    // Обработка ошибок
+                                    HandleNewClientMessage(match.Groups[1].Value);
+                                    continue;
                                 }
-                            }
-                            else
-                            {
                                 Regex regexLogin = new Regex(@"login (\w+)");
                                 Match matchLogin = regexLogin.Match(message);
                                 if (matchLogin.Success)
                                 {
+                                    Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
                                     string clientLogin = matchLogin.Groups[1].Value;
                                     clientProccessor.AddLogin(clientLogin);
-                                } else
-                                {
-                                    clientProccessor.WriteIntoConsoleAndFile(message);
+                                    continue;
                                 }
+                                Regex regexLoginFrom = new Regex(@"Client connected with login (\w+)");
+                                Match matchLoginFrom = regexLoginFrom.Match(message);
+                                if (matchLoginFrom.Success)
+                                {
+                                    Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
+                                    continue;
+                                }
+
+                                clientProccessor.WriteIntoConsoleAndFile(message);
                             }
                         }
                     }
