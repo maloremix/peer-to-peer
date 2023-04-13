@@ -1,7 +1,9 @@
 ﻿using ConsoleApp8;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,36 +16,39 @@ class ChatServer : IChatServer
 
     public ChatServer()
     {
+        // TODO не использовать clients и logins в ChatServer. Вынести работу с этими коллекциями в ClientProcessor
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
         clientProccessor = new ClientProcessor(clients, logins);
     }
 
+    // TODO сделать приватным
     public int GetFreePort()
     {
-        int port = 0;
-        for (int i = 5000; i <= 5020; i++)
+        var firstChatPort = 5000;
+        var lastChatPort = 5020;
+
+        var usedPorts = IPGlobalProperties
+            .GetIPGlobalProperties()
+            .GetActiveTcpListeners()
+            .Where(it => it.Port >= firstChatPort && it.Port <= lastChatPort)
+            .Select(it => it.Port);
+
+        for (int port = firstChatPort; port <= lastChatPort; port++)
         {
-            try
+            if (!usedPorts.Contains(port))
             {
-                TcpListener listener = new TcpListener(IPAddress.Any, i);
-                listener.Start();
-                port = i;
-                Console.WriteLine($"Прослушивание входящих сообщений на порту {port}");
-                listener.Stop();
-                break;
-            }
-            catch
-            {
-                // Порт занят, переходим к следующему порту
+                return port;
             }
         }
-        return port;
+
+        return 0;
     }
 
     public void Start()
     {
         int port = GetFreePort();
+        // TODO строку 52 вынести в метод clientProccessor.SetStartLogin
         Console.WriteLine("Введите логин: ");
         clientProccessor.SetStartLogin();
         Thread listenerThread = new Thread(() =>
@@ -54,15 +59,22 @@ class ChatServer : IChatServer
             while (true)
             {
                 TcpClient client = listener.AcceptTcpClient();
+                
+                
+                
+                
 
-                Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
-
+                // TODO не создавать поток под каждого клиента. Один поток должен работать со всеми клиентами
                 Thread handleThread = new Thread(() =>
                 {
                     try
                     {
                         NetworkStream stream = client.GetStream();
 
+                        
+                        // TODO выводить при подключении нового пользователя его логин, а не ip адрес
+                        Console.WriteLine($"Подключен новый клиент: {client.Client.RemoteEndPoint}");
+                        
                         while (client.Connected)
                         {
                             byte[] buffer = new byte[client.ReceiveBufferSize];

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -16,6 +17,10 @@ public class ClientProcessor : IClientProcessor
     private ConcurrentBag<string> logins;
     private BinaryWriter Writer;
     private int LastId = 1;
+    
+    // TODO убрать из аргументов конструктора ConcurrentBag<TcpClient> clients и ConcurrentBag<string> logins
+    // так как они не дают правильно прокинуть ClientProcessor в ChatServer из-за того, что параметры конструктора
+    // ClientProcessor не представлены в сервисной коллекции
     public ClientProcessor(ConcurrentBag<TcpClient> clients, ConcurrentBag<string> logins)
     {
         this.clients = clients;
@@ -28,32 +33,30 @@ public class ClientProcessor : IClientProcessor
     }
     public void Handshake(int port)
     {
-        // Производим хендшейк с каждым портом от 5000 до 5020
-        for (int remotePort = 5000; remotePort <= 5005; remotePort++)
+        var firstChatPort = 5000;
+        var lastChatPort = 5020;
+        
+        var usedPorts = IPGlobalProperties
+            .GetIPGlobalProperties()
+            .GetActiveTcpListeners()
+            .Where(it => it.Port >= firstChatPort && it.Port <= lastChatPort && it.Port != port)
+            .Select(it => it.Port);
+
+        foreach (var usedPort in usedPorts)
         {
-            if (remotePort == port)
-            {
-                continue;
-            }
-            try
-            {
-                TcpClient client = new TcpClient();
-                client.Connect("localhost", remotePort); // Устанавливаем соединение с хостом и портом
-                clients.Add(client); // Добавляем клиента в список
-                NetworkStream stream = client.GetStream();
-                byte[] messageBytes = Encoding.UTF8.GetBytes("Client connected with port " + port);
-                stream.Write(messageBytes, 0, messageBytes.Length);
-            }
-            catch (Exception e)
-            {
-                // Обработка ошибок
-            }
+            TcpClient client = new TcpClient();
+            client.Connect("localhost", usedPort); // Устанавливаем соединение с хостом и портом
+            clients.Add(client); // Добавляем клиента в список
+            NetworkStream stream = client.GetStream();
+            byte[] messageBytes = Encoding.UTF8.GetBytes("Client connected with port " + port);
+            stream.Write(messageBytes, 0, messageBytes.Length);
         }
     }
 
     public void SetStartLogin()
     {
         Login = Console.ReadLine();
+        // TODO строку 56 вынести после вызова clientProccessor.SetStartLogin();
         Console.WriteLine("Устанавливается соединение с другими клиентами...");
     }
 
@@ -101,6 +104,7 @@ public class ClientProcessor : IClientProcessor
         }
     }
 
+    // TODO разбить логику отображения и записи сообщений в хранилище
     public void WriteIntoConsoleAndFile(string message)
     {
         Console.WriteLine(message);
@@ -159,6 +163,7 @@ public class ClientProcessor : IClientProcessor
 
     public void StartChatting()
     {
+        // TODO подумать над тем, как исправить эту логику
         while (logins.Count != clients.Count)
         {
             Thread.Sleep(100);
