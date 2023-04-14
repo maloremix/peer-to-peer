@@ -19,7 +19,6 @@ namespace ConsoleApp8
                 .AddSingleton<IStorage, Storage>()
                 .BuildServiceProvider();
 
-            // TODO убрать все блоки try catch
             var chatServer = serviceProvider.GetService<IChatServer>();
             chatServer.Start();
         }

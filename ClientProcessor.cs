@@ -52,6 +52,14 @@ public class ClientProcessor : IClientProcessor
         }
     }
 
+    private void ConsoleClientWrite(string refactorMessage)
+    {
+        Console.SetCursorPosition(0, Console.CursorTop - 1); // переместить курсор в начало предыдущей строки
+        Console.Write(new string(' ', Console.WindowWidth)); // очистить предыдущее сообщение
+        Console.SetCursorPosition(0, Console.CursorTop - 1); // переместить курсор в начало предыдущей строки
+        Console.WriteLine(refactorMessage); // вывести отформатированное сообщение
+    }
+
     public void AddClient(TcpClient client)
     {
         clients.Add(client);
@@ -105,6 +113,8 @@ public class ClientProcessor : IClientProcessor
         string line;
         while ((line = Console.ReadLine()) != "exit")
         {
+            string refactorMessage = $"[{DateTime.Now}] {Login}[{storage.GetLastId()}]: \"{line}\"";
+            ConsoleClientWrite(refactorMessage);
             if (Regex.IsMatch(line, @"^del-mes\s+[0-9]+$"))
             {
                 Match match = Regex.Match(line, @"^del-mes\s+(?<id>[0-9]+)$");
@@ -115,7 +125,6 @@ public class ClientProcessor : IClientProcessor
             else
             {
                 // Отправляем сообщение всем доступным клиентам
-                string refactorMessage = $"[{DateTime.Now}] {Login}[{storage.GetLastId()}]: \"{line}\"";
                 BroadcastMessage(refactorMessage);
                 storage.WriteIntoFile(refactorMessage);
             }
