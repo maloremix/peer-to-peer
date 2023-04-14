@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ConsoleApp7;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleApp8
@@ -15,6 +16,7 @@ namespace ConsoleApp8
             serviceProvider = new ServiceCollection()
                 .AddSingleton<IClientProcessor, ClientProcessor>()
                 .AddSingleton<IChatServer, ChatServer>()
+                .AddSingleton<IStorage, Storage>()
                 .BuildServiceProvider();
 
             // TODO убрать все блоки try catch

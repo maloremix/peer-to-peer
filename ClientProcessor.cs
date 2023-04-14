@@ -1,4 +1,5 @@
-﻿using ConsoleApp8;
+﻿using ConsoleApp7;
+using ConsoleApp8;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -13,25 +14,21 @@ public class ClientProcessor : IClientProcessor
 {
     private string Login;
 
+
+    private IStorage storage;
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
-    private BinaryWriter Writer;
-    private int LastId = 1;
     
-    public ClientProcessor()
+    public ClientProcessor(IStorage storage)
     {
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
+        this.storage = storage;
     }
 
     public string GetLogin()
     {
         return Login;
-    }
-    
-    public int GetLastId()
-    {
-        return LastId;
     }
     public void Handshake(int port)
     {
@@ -86,84 +83,6 @@ public class ClientProcessor : IClientProcessor
         BroadcastMessage($"Client connected with login {Login}");
     }
 
-    public void readHistory(string login)
-    {
-        string filePath = $"{login}.dat";
-        if (File.Exists(filePath))
-        {
-            using (BinaryReader reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
-            {
-                string lastLine = "";
-                while (reader.BaseStream.Position != reader.BaseStream.Length)
-                {
-                    string line = reader.ReadString();
-                    lastLine = line;
-                    Console.WriteLine(line);
-                }
-
-                // Ищем идентификаторы в последней строке
-                Regex regex = new Regex(@"\[(\d+)\]");
-                Match match = regex.Match(lastLine);
-                if (match.Success)
-                {
-                    LastId = int.Parse(match.Groups[1].Value) + 1;
-                }
-            }
-        }
-    }
-    public void WriteIntoConsole(string message)
-    {
-        Console.WriteLine(message);
-    }
-    public void WriteIntoFile(string message)
-    {
-        Writer.Write(message);
-        Writer.Flush();
-        LastId++;
-    }
-
-    public void DeleteMessageById(int id)
-    {
-        Writer.Dispose();
-        string filePath = $"{Login}.dat";
-        string tempFilePath = $"{Login}_temp.dat";
-
-        if (File.Exists(filePath))
-        {
-            using (BinaryReader reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
-            {
-                using (BinaryWriter writer = new BinaryWriter(File.Open(tempFilePath, FileMode.Create)))
-                {
-                    while (reader.BaseStream.Position != reader.BaseStream.Length)
-                    {
-                        string line = reader.ReadString();
-
-                        // Получаем id из строки с помощью регулярного выражения
-                        Match match = Regex.Match(line, @"\[(\d+)\]:");
-                        if (match.Success)
-                        {
-                            int messageId = int.Parse(match.Groups[1].Value);
-
-                            // Если id совпадает с искомым, то не записываем строку во временный файл
-                            if (messageId == id)
-                            {
-                                continue;
-                            }
-                        }
-
-                        // Записываем строку во временный файл
-                        writer.Write(line);
-                    }
-                }
-            }
-
-            // Удаляем старый файл и переименовываем временный файл
-            File.Delete(filePath);
-            File.Move(tempFilePath, filePath);
-            Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
-        }
-    }
-
     public void StartChatting()
     {
         // TODO подумать над тем, как исправить эту логику
@@ -179,11 +98,9 @@ public class ClientProcessor : IClientProcessor
             Login = Console.ReadLine();
         }
 
-        readHistory(Login);
+        storage.SetLoginStorage(Login);
 
         SayLogin();
-
-        Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
 
         string line;
         while ((line = Console.ReadLine()) != "exit")
@@ -192,15 +109,15 @@ public class ClientProcessor : IClientProcessor
             {
                 Match match = Regex.Match(line, @"^del-mes\s+(?<id>[0-9]+)$");
                 int id = int.Parse(match.Groups["id"].Value);
-                DeleteMessageById(id);
+                storage.DeleteMessageById(id);
                 Console.WriteLine("Сообщение с id " + id + " Удалено");
             }
             else
             {
                 // Отправляем сообщение всем доступным клиентам
-                string refactorMessage = $"[{DateTime.Now}] {Login}[{LastId}]: \"{line}\"";
+                string refactorMessage = $"[{DateTime.Now}] {Login}[{storage.GetLastId()}]: \"{line}\"";
                 BroadcastMessage(refactorMessage);
-                WriteIntoFile(refactorMessage);
+                storage.WriteIntoFile(refactorMessage);
             }
         }
     }

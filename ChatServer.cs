@@ -1,4 +1,5 @@
-﻿using ConsoleApp8;
+﻿using ConsoleApp7;
+using ConsoleApp8;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,11 +12,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 class ChatServer : IChatServer
 {
-    private IClientProcessor clientProccessor;
+    private IClientProcessor clientProcсessor;
+    private IStorage storage;
 
-    public ChatServer(IClientProcessor clientProcessor)
+    public ChatServer(IClientProcessor clientProcсessor, IStorage storage)
     {
-        clientProccessor = clientProcessor;
+        this.clientProcсessor = clientProcсessor;
+        this.storage = storage;
     }
     private int GetFreePort()
     {
@@ -43,9 +46,9 @@ class ChatServer : IChatServer
     {
             TcpClient newClient = new TcpClient();
             newClient.Connect("localhost", int.Parse(newClientPort));
-            clientProccessor.AddClient(newClient);
+        clientProcсessor.AddClient(newClient);
             NetworkStream streamLogin = newClient.GetStream();
-            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProccessor.GetLogin());
+            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProcсessor.GetLogin());
             streamLogin.Write(messageBytes, 0, messageBytes.Length);
     }
 
@@ -53,7 +56,7 @@ class ChatServer : IChatServer
     {
         int port = GetFreePort();
 
-        clientProccessor.SetStartLogin();
+        clientProcсessor.SetStartLogin();
         Console.WriteLine("Устанавливается соединение с другими клиентами...");
         Thread listenerThread = new Thread(() =>
         {
@@ -98,7 +101,7 @@ class ChatServer : IChatServer
                         {
                             Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
                             string clientLogin = matchLogin.Groups[1].Value;
-                            clientProccessor.AddLogin(clientLogin);
+                            clientProcсessor.AddLogin(clientLogin);
                             continue;
                         }
                         Regex regexLoginFrom = new Regex(@"Client connected with login (\w+)");
@@ -108,9 +111,9 @@ class ChatServer : IChatServer
                             Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
                             continue;
                         }
-                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + clientProccessor.GetLastId().ToString() + "]");
-                        clientProccessor.WriteIntoConsole(refactorMessage);
-                        clientProccessor.WriteIntoFile(refactorMessage);
+                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
+                        storage.WriteIntoConsole(refactorMessage);
+                        storage.WriteIntoFile(refactorMessage);
                     }
                 }
 
@@ -119,7 +122,7 @@ class ChatServer : IChatServer
             }
         });
         listenerThread.Start();
-        clientProccessor.Handshake(port);
-        clientProccessor.StartChatting();
+        clientProcсessor.Handshake(port);
+        clientProcсessor.StartChatting();
     }
 }
