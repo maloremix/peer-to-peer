@@ -10,20 +10,21 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-public class ClientProcessor : IClientProcessor
+class ClientProcessor : IClientProcessor
 {
     private string Login;
 
-
     private IStorage storage;
+    private IBDStorage bdStorage;
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
     
-    public ClientProcessor(IStorage storage)
+    public ClientProcessor(IStorage storage, IBDStorage bdStorage)
     {
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
         this.storage = storage;
+        this.bdStorage = bdStorage;
     }
 
     public string GetLogin()
@@ -105,15 +106,17 @@ public class ClientProcessor : IClientProcessor
             Console.WriteLine("Введите логин еще раз: ");
             Login = Console.ReadLine();
         }
-
-        storage.SetLoginStorage(Login);
+        bdStorage.Migrate();
+        bdStorage.SetLoginStorage(Login);
+        //storage.SetLoginStorage(Login);
+        bdStorage.ReadHistory();
 
         SayLogin();
 
         string line;
         while ((line = Console.ReadLine()) != "exit")
         {
-            string refactorMessage = $"[{DateTime.Now}] {Login}[{storage.GetLastId()}]: \"{line}\"";
+            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{line}\"";
             ConsoleClientWrite(refactorMessage);
             if (Regex.IsMatch(line, @"^del-mes\s+[0-9]+$"))
             {

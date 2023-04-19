@@ -14,11 +14,13 @@ class ChatServer : IChatServer
 {
     private IClientProcessor clientProcсessor;
     private IStorage storage;
+    private IBDStorage bdStorage;
 
-    public ChatServer(IClientProcessor clientProcсessor, IStorage storage)
+    public ChatServer(IClientProcessor clientProcсessor, IStorage storage, IBDStorage bdStorage)
     {
         this.clientProcсessor = clientProcсessor;
         this.storage = storage;
+        this.bdStorage = bdStorage;
     }
     private int GetFreePort()
     {
@@ -112,6 +114,14 @@ class ChatServer : IChatServer
                             continue;
                         }
                         string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
+                        string patternLoginMessage = @"^\[.*\]\s*(\w+)\[\d+\]:\s*""(.*)""$";
+                        Match matchLoginMessage = Regex.Match(message, patternLoginMessage);
+                        if (matchLoginMessage.Success)
+                        {
+                            string login = matchLoginMessage.Groups[1].Value;
+                            string messageToBd = matchLoginMessage.Groups[2].Value;
+                            //bdStorage.AddMessage(login, clientProcсessor.GetLogin(), messageToBd);
+                        }
                         storage.WriteIntoConsole(refactorMessage);
                         storage.WriteIntoFile(refactorMessage);
                     }
