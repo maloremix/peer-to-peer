@@ -141,6 +141,7 @@
     <Compile Include="BDStorage.cs" />
     <Compile Include="ChatServer.cs" />
     <Compile Include="ClientProcessor.cs" />
+    <Compile Include="DatabaseMigrator.cs" />
     <Compile Include="IBDStorage.cs" />
     <Compile Include="IChatServer.cs" />
     <Compile Include="IClientProcessor.cs" />

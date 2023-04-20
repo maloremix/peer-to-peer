@@ -14,9 +14,9 @@ class ChatServer : IChatServer
 {
     private IClientProcessor clientProcсessor;
     private IStorage storage;
-    private IBDStorage bdStorage;
+    private IStorage bdStorage;
 
-    public ChatServer(IClientProcessor clientProcсessor, IStorage storage, IBDStorage bdStorage)
+    public ChatServer(IClientProcessor clientProcсessor, IStorage storage, IStorage bdStorage)
     {
         this.clientProcсessor = clientProcсessor;
         this.storage = storage;
@@ -113,16 +113,10 @@ class ChatServer : IChatServer
                             Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
                             continue;
                         }
-                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + bdStorage.GetLastId().ToString() + "]");
-                        string patternLoginMessage = @"^\[.*\]\s*(\w+)\[\d+\]:\s*""(.*)""$";
-                        Match matchLoginMessage = Regex.Match(message, patternLoginMessage);
-                        if (matchLoginMessage.Success)
-                        {
-                            string login = matchLoginMessage.Groups[1].Value;
-                            string messageToBd = matchLoginMessage.Groups[2].Value;
-                            //bdStorage.AddMessage(login, clientProcсessor.GetLogin(), messageToBd);
-                        }
-                        bdStorage.WriteIntoConsole(refactorMessage);
+                        //bdStorage.WriteIntoStorage(message);
+                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
+                        Console.WriteLine(refactorMessage);
+                        storage.WriteIntoStorage(message);
                         //storage.WriteIntoConsole(refactorMessage);
                         //storage.WriteIntoFile(refactorMessage);
                     }

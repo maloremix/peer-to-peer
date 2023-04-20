@@ -16,8 +16,7 @@ namespace ConsoleApp8
             serviceProvider = new ServiceCollection()
                 .AddSingleton<IClientProcessor, ClientProcessor>()
                 .AddSingleton<IChatServer, ChatServer>()
-                .AddSingleton<IStorage, Storage>()
-                .AddSingleton<IBDStorage, BDStorage>()
+                .AddSingleton<IStorage, BDStorage>()
                 .BuildServiceProvider();
 
             var chatServer = serviceProvider.GetService<IChatServer>();

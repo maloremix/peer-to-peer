@@ -54,12 +54,8 @@ namespace ConsoleApp7
             }
         }
 
-        public void WriteIntoConsole(string message)
-        {
-            Console.WriteLine(message);
-        }
 
-        public void WriteIntoFile(string message)
+        public void WriteIntoStorage(string message)
         {
             if (Writer == null)
             {

@@ -53,7 +53,7 @@ namespace ConsoleApp7
         }
     }
 
-    class BDStorage : IBDStorage
+    class BDStorage : IStorage
     {
         private int lastId = 1;
         public BDStorage()
@@ -74,24 +74,25 @@ namespace ConsoleApp7
                     throw new ArgumentException("Invalid source user.");
                 }
 
-                var newMessage = new Message
+                var existingMessage = context.Messages
+                    .Include(m => m.Sender)
+                    .FirstOrDefault(m => m.Date == date && m.Text == message && m.Sender.Username == sender);
+                if (existingMessage == null)
                 {
-                    Date = date,
-                    Text = message,
-                    SenderId = sourceUser.Id
-                };
+                    var newMessage = new Message
+                    {
+                        Date = date,
+                        Text = message,
+                        SenderId = sourceUser.Id
+                    };
 
-                context.Messages.Add(newMessage);
-                context.SaveChanges();
+                    context.Messages.Add(newMessage);
+                    context.SaveChanges();;
+                }
                 lastId++;
             }
         }
-        public void WriteIntoConsole(string message)
-        {
-            Console.WriteLine(message);
-            lastId++;
-        }
-        public void ReadHistory()
+        private void ReadHistory()
         {
             using (var context = new ApplicationDbContext())
             {
@@ -112,6 +113,7 @@ namespace ConsoleApp7
 
         public void SetLoginStorage(string login)
         {
+            ReadHistory();
             using (var context = new ApplicationDbContext())
             {
                 if (context.Users.Any(u => u.Username == login))
@@ -128,68 +130,41 @@ namespace ConsoleApp7
                 context.SaveChanges();
             }
         }
-
-        public void Migrate()
+        public void WriteIntoStorage(string message)
         {
-            var datFiles = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dat");
-
-            var messageRegex = new Regex(@"\[(.*?)\]\s(.*?)\[.*?\]:\s""(.*?)""");
-
-            foreach (var datFile in datFiles)
+            string patternLoginMessage = @"^\[(.*)\]\s*(\w+)\[\d+\]:\s*""(.*)""$";
+            Match matchLoginMessage = Regex.Match(message, patternLoginMessage);
+            if (matchLoginMessage.Success)
             {
-                using (var fileStream = File.Open(datFile, FileMode.Open))
-                {
-                    // Используем BufferedStream для ускорения чтения данных
-                    using (var bufferedStream = new BufferedStream(fileStream))
-                    {
-                        using (var binaryReader = new BinaryReader(bufferedStream))
-                        {
-                            // Читаем данные из бинарного файла
-                            while (binaryReader.PeekChar() > -1)
-                            {
-                                var line = binaryReader.ReadString();
-                                var match = messageRegex.Match(line);
-                                if (match.Success)
-                                {
-                                var date = DateTime.Parse(match.Groups[1].Value);
-                                    var sender = match.Groups[2].Value;
-                                    var text = match.Groups[3].Value;
-
-                                    using (var context = new ApplicationDbContext())
-                                    {
-                                        // проверяем, существует ли сообщение с такими же полями в базе данных
-                                        var existingMessage = context.Messages
-                                            .Include(m => m.Sender)
-                                            .FirstOrDefault(m => m.Date == date && m.Text == text && m.Sender.Username == sender);
-
-                                        // проверяем, существует ли пользователь с таким именем в базе данных
-                                        var existingUser = context.Users.FirstOrDefault(u => u.Username == sender);
-
-                                        if (existingMessage == null)
-                                        {
-                                            // добавляем сообщение в базу данных
-                                            var newMessage = new Message
-                                            {
-                                                Date = date,
-                                                Text = text,
-                                                Sender = existingUser ?? new User { Username = sender }
-                                            };
-
-                                            context.Messages.Add(newMessage);
-                                            context.SaveChanges();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                DateTime date = DateTime.Parse(matchLoginMessage.Groups[1].Value);
+                string login = matchLoginMessage.Groups[2].Value;
+                string messageToBd = matchLoginMessage.Groups[3].Value;
+                AddMessage(login, messageToBd, date);
             }
         }
 
         public int GetLastId()
         {
             return lastId;
+        }
+
+        public void DeleteMessageById(int id)
+        {
+            using (var context = new ApplicationDbContext())
+            {
+                var messageToDelete = context.Messages
+                    .OrderBy(m => m.Date)
+                    .Skip(id - 1) // пропустить 4 первых записи
+                    .FirstOrDefault(); // выбрать пятую запись
+
+                if (messageToDelete == null)
+                {
+                    throw new ArgumentException("Message not found");
+                }
+
+                context.Messages.Remove(messageToDelete);
+                context.SaveChanges();
+            }
         }
     }
 }

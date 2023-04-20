@@ -15,11 +15,11 @@ class ClientProcessor : IClientProcessor
     private string Login;
 
     private IStorage storage;
-    private IBDStorage bdStorage;
+    private IStorage bdStorage;
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
-    
-    public ClientProcessor(IStorage storage, IBDStorage bdStorage)
+
+    public ClientProcessor(IStorage storage, IStorage bdStorage)
     {
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
@@ -35,7 +35,7 @@ class ClientProcessor : IClientProcessor
     {
         var firstChatPort = 5000;
         var lastChatPort = 5020;
-        
+
         var usedPorts = IPGlobalProperties
             .GetIPGlobalProperties()
             .GetActiveTcpListeners()
@@ -106,31 +106,35 @@ class ClientProcessor : IClientProcessor
             Console.WriteLine("Введите логин еще раз: ");
             Login = Console.ReadLine();
         }
-        bdStorage.Migrate();
-        bdStorage.SetLoginStorage(Login);
+        storage.SetLoginStorage(Login);
         //storage.SetLoginStorage(Login);
-        bdStorage.ReadHistory();
 
         SayLogin();
 
         string line;
         while ((line = Console.ReadLine()) != "exit")
         {
-            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{bdStorage.GetLastId()}]: \"{line}\"";
+            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{line}\"";
             ConsoleClientWrite(refactorMessage);
             if (Regex.IsMatch(line, @"^del-mes\s+[0-9]+$"))
             {
                 Match match = Regex.Match(line, @"^del-mes\s+(?<id>[0-9]+)$");
                 int id = int.Parse(match.Groups["id"].Value);
-                //storage.DeleteMessageById(id);
+                storage.DeleteMessageById(id);
                 Console.WriteLine("Сообщение с id " + id + " Удалено");
+            }
+            else if (line == "/migrate")
+            {
+                var databaseMigrator = new DatabaseMigrator();
+                databaseMigrator.Migrate();
+                Console.WriteLine("Миграция проведена успешно");
             }
             else
             {
                 // Отправляем сообщение всем доступным клиентам
+                storage.WriteIntoStorage(refactorMessage);
                 BroadcastMessage(refactorMessage);
                 //storage.WriteIntoFile(refactorMessage);
-                bdStorage.AddMessage(Login, line, DateTime.Now);
             }
         }
     }
