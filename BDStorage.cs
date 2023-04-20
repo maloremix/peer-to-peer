@@ -55,6 +55,7 @@ namespace ConsoleApp7
 
     class BDStorage : IBDStorage
     {
+        private int lastId = 1;
         public BDStorage()
         {
             using (var context = new ApplicationDbContext())
@@ -82,7 +83,13 @@ namespace ConsoleApp7
 
                 context.Messages.Add(newMessage);
                 context.SaveChanges();
+                lastId++;
             }
+        }
+        public void WriteIntoConsole(string message)
+        {
+            Console.WriteLine(message);
+            lastId++;
         }
         public void ReadHistory()
         {
@@ -90,11 +97,15 @@ namespace ConsoleApp7
             {
                 var listMessages = context.Messages
                     .Include(m => m.Sender)
-                    .OrderByDescending(m => m.Date)
+                    .OrderBy(m => m.Date)
                     .ToList();
+
+                lastId = context.Messages.Count() + 1;
+                var messageConsoleId = 1;
                 foreach (var message in listMessages)
                 {
-                    Console.WriteLine($"[{message.Date}] {message.Sender.Username}: \"{message.Text}\"");
+                    Console.WriteLine($"[{message.Date:yyyy-MM-dd HH:mm:ss.ff}] {message.Sender.Username}[{messageConsoleId}]: \"{message.Text}\"");
+                    messageConsoleId++;
                 }
             }
         }
@@ -174,6 +185,11 @@ namespace ConsoleApp7
                     }
                 }
             }
+        }
+
+        public int GetLastId()
+        {
+            return lastId;
         }
     }
 }

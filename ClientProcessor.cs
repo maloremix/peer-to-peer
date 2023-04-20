@@ -116,20 +116,21 @@ class ClientProcessor : IClientProcessor
         string line;
         while ((line = Console.ReadLine()) != "exit")
         {
-            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{line}\"";
+            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{bdStorage.GetLastId()}]: \"{line}\"";
             ConsoleClientWrite(refactorMessage);
             if (Regex.IsMatch(line, @"^del-mes\s+[0-9]+$"))
             {
                 Match match = Regex.Match(line, @"^del-mes\s+(?<id>[0-9]+)$");
                 int id = int.Parse(match.Groups["id"].Value);
-                storage.DeleteMessageById(id);
+                //storage.DeleteMessageById(id);
                 Console.WriteLine("Сообщение с id " + id + " Удалено");
             }
             else
             {
                 // Отправляем сообщение всем доступным клиентам
                 BroadcastMessage(refactorMessage);
-                storage.WriteIntoFile(refactorMessage);
+                //storage.WriteIntoFile(refactorMessage);
+                bdStorage.AddMessage(Login, line, DateTime.Now);
             }
         }
     }

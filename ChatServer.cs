@@ -113,7 +113,7 @@ class ChatServer : IChatServer
                             Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
                             continue;
                         }
-                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
+                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + bdStorage.GetLastId().ToString() + "]");
                         string patternLoginMessage = @"^\[.*\]\s*(\w+)\[\d+\]:\s*""(.*)""$";
                         Match matchLoginMessage = Regex.Match(message, patternLoginMessage);
                         if (matchLoginMessage.Success)
@@ -122,8 +122,9 @@ class ChatServer : IChatServer
                             string messageToBd = matchLoginMessage.Groups[2].Value;
                             //bdStorage.AddMessage(login, clientProcсessor.GetLogin(), messageToBd);
                         }
-                        storage.WriteIntoConsole(refactorMessage);
-                        storage.WriteIntoFile(refactorMessage);
+                        bdStorage.WriteIntoConsole(refactorMessage);
+                        //storage.WriteIntoConsole(refactorMessage);
+                        //storage.WriteIntoFile(refactorMessage);
                     }
                 }
 
