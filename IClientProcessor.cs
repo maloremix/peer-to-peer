@@ -12,6 +12,7 @@ namespace ConsoleApp8
         void Handshake(int port);
         void BroadcastMessage(string message);
         void StartChatting();
+        bool IsMute();
         void SetStartLogin();
         void AddLogin(string login);
         void AddClient(TcpClient client);

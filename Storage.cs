@@ -111,5 +111,10 @@ namespace ConsoleApp7
                 Writer = new BinaryWriter(new FileStream($"{Login}.dat", FileMode.Append, FileAccess.Write, FileShare.None));
             }
         }
+
+        public void ReadHistory(int count, DateTime? before, DateTime? after)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

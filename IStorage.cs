@@ -11,6 +11,7 @@ namespace ConsoleApp7
         void DeleteMessageById(int id);
         void WriteIntoStorage(string message);
         void SetLoginStorage(string login);
+        void ReadHistory(int count, DateTime? before, DateTime? after);
         int GetLastId();
     }
 }

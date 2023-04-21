@@ -92,14 +92,27 @@ namespace ConsoleApp7
                 lastId++;
             }
         }
-        private void ReadHistory()
+        public void ReadHistory(int count = 100, DateTime? before = null, DateTime? after = null)
         {
             using (var context = new ApplicationDbContext())
             {
-                var listMessages = context.Messages
+                IQueryable<Message> messagesQuery = context.Messages
                     .Include(m => m.Sender)
-                    .OrderBy(m => m.Date)
-                    .ToList();
+                    .OrderBy(m => m.Date);
+
+                if (before.HasValue)
+                {
+                    messagesQuery = messagesQuery.Where(m => m.Date < before.Value);
+                }
+
+                if (after.HasValue)
+                {
+                    messagesQuery = messagesQuery.Where(m => m.Date > after.Value);
+                }
+
+                messagesQuery = messagesQuery.Take(Math.Min(count, 1000));
+
+                var listMessages = messagesQuery.ToList();
 
                 lastId = context.Messages.Count() + 1;
                 var messageConsoleId = 1;
@@ -113,7 +126,7 @@ namespace ConsoleApp7
 
         public void SetLoginStorage(string login)
         {
-            ReadHistory();
+            ReadHistory(1000);
             using (var context = new ApplicationDbContext())
             {
                 if (context.Users.Any(u => u.Username == login))

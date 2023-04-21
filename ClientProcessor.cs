@@ -2,10 +2,12 @@
 using ConsoleApp8;
 using System;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -13,23 +15,27 @@ using System.Threading;
 class ClientProcessor : IClientProcessor
 {
     private string Login;
+    private bool mute;
 
     private IStorage storage;
-    private IStorage bdStorage;
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
 
-    public ClientProcessor(IStorage storage, IStorage bdStorage)
+    public ClientProcessor(IStorage storage)
     {
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
         this.storage = storage;
-        this.bdStorage = bdStorage;
     }
 
     public string GetLogin()
     {
         return Login;
+    }
+
+    public bool IsMute()
+    {
+        return mute;
     }
     public void Handshake(int port)
     {
@@ -114,8 +120,6 @@ class ClientProcessor : IClientProcessor
         string line;
         while ((line = Console.ReadLine()) != "exit")
         {
-            string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{line}\"";
-            ConsoleClientWrite(refactorMessage);
             if (Regex.IsMatch(line, @"^del-mes\s+[0-9]+$"))
             {
                 Match match = Regex.Match(line, @"^del-mes\s+(?<id>[0-9]+)$");
@@ -123,15 +127,74 @@ class ClientProcessor : IClientProcessor
                 storage.DeleteMessageById(id);
                 Console.WriteLine("Сообщение с id " + id + " Удалено");
             }
-            else if (line == "/migrate")
+            else if (Regex.IsMatch(line, @"^/migrate$"))
             {
                 var databaseMigrator = new DatabaseMigrator();
                 databaseMigrator.Migrate();
                 Console.WriteLine("Миграция проведена успешно");
             }
+            else if (Regex.IsMatch(line, @"^/mute$"))
+            {
+                mute = true;
+            }
+            else if (Regex.IsMatch(line, @"^/mute\s+(\d+)\s*(s|m)?$"))
+            {
+                // Отключение приема сообщений на указанное время
+                mute = true;
+
+                Match match = Regex.Match(line, @"^/mute\s+(\d+)\s*(s|m)?$");
+                int time = int.Parse(match.Groups[1].Value);
+                string timeUnit = match.Groups[2].Value;
+
+                if (timeUnit == "m")
+                {
+                    time *= 60;
+                }
+                var timer = new System.Timers.Timer(time * 1000);
+                timer.Elapsed += (sender, e) =>
+                {
+                    mute = false;
+                    timer.Dispose(); // Освобождаем ресурсы таймера
+                };
+                timer.AutoReset = false; // Запускаем таймер только один раз
+                timer.Start();
+            }
+            else if (Regex.IsMatch(line, @"^/unmute$"))
+            {
+                mute = false;
+            }
+            else if (Regex.IsMatch(line, @"^\/history(\s+--count=\d{1,4})?(\s+--before=\d{4}\.\d{2}\.\d{2}T\d{2}:\d{2})?(\s+--after=\d{4}\.\d{2}\.\d{2}T\d{2}:\d{2})?$"))
+            {
+                var countMatch = Regex.Match(line, @"-count=(\d{1,4})");
+                var beforeMatch = Regex.Match(line, @"--before=(\d{4}\.\d{2}\.\d{2}T\d{2}:\d{2})");
+                var afterMatch = Regex.Match(line, @"--after=(\d{4}\.\d{2}\.\d{2}T\d{2}:\d{2})");
+
+                int count = 100;
+                DateTime? before = null;
+                DateTime? after = null;
+
+                if (countMatch.Success)
+                {
+                    count = Math.Min(int.Parse(countMatch.Groups[1].Value), 1000);
+                }
+
+                if (beforeMatch.Success)
+                {
+                    before = DateTime.ParseExact(beforeMatch.Groups[1].Value, "yyyy.MM.ddTHH:mm", CultureInfo.InvariantCulture);
+                }
+
+                if (afterMatch.Success)
+                {
+                    after = DateTime.ParseExact(afterMatch.Groups[1].Value, "yyyy.MM.ddTHH:mm", CultureInfo.InvariantCulture);
+                }
+
+                storage.ReadHistory(count, before, after);
+            }
             else
             {
                 // Отправляем сообщение всем доступным клиентам
+                string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{line}\"";
+                ConsoleClientWrite(refactorMessage);
                 storage.WriteIntoStorage(refactorMessage);
                 BroadcastMessage(refactorMessage);
                 //storage.WriteIntoFile(refactorMessage);
