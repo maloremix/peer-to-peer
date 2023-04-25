@@ -170,18 +170,12 @@ namespace ConsoleApp7
         {
             using (var context = new ApplicationDbContext())
             {
-                var messageToDelete = context.Messages
-                    .OrderBy(m => m.Date)
-                    .Skip(id - 1) // пропустить 4 первых записи
-                    .FirstOrDefault(); // выбрать пятую запись
-
-                if (messageToDelete == null)
+                var messageToDelete = context.Messages.FirstOrDefault(m => m.Id == id);
+                if (messageToDelete != null)
                 {
-                    throw new ArgumentException("Message not found");
+                    context.Messages.Remove(messageToDelete);
+                    context.SaveChanges();
                 }
-
-                context.Messages.Remove(messageToDelete);
-                context.SaveChanges();
             }
         }
 
