@@ -26,11 +26,16 @@ namespace ConsoleApp7
         public User Sender { get; set; }
     }
 
-
+    public class Joke
+    {
+        public int Id { get; set; }
+        public string Text { get; set; }
+    }
     public class ApplicationDbContext : DbContext
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<Joke> Jokes { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseNpgsql("Server=localhost;Port=5432;Database=FirstBD;User Id=postgres;Password=postgres;");
@@ -87,7 +92,7 @@ namespace ConsoleApp7
                     };
 
                     context.Messages.Add(newMessage);
-                    context.SaveChanges();;
+                    context.SaveChanges();
                 }
                 lastId++;
             }
@@ -177,6 +182,17 @@ namespace ConsoleApp7
 
                 context.Messages.Remove(messageToDelete);
                 context.SaveChanges();
+            }
+        }
+
+        public string GetRandomJoke()
+        {
+            using (var db = new ApplicationDbContext())
+            {
+                var count = db.Jokes.Count();
+                var random = new Random();
+                var joke = db.Jokes.Skip(random.Next(0, count)).FirstOrDefault();
+                return joke.Text;
             }
         }
     }

@@ -116,5 +116,9 @@ namespace ConsoleApp7
         {
             throw new NotImplementedException();
         }
+        public string GetRandomJoke()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

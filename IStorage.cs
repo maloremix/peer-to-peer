@@ -13,5 +13,6 @@ namespace ConsoleApp7
         void SetLoginStorage(string login);
         void ReadHistory(int count, DateTime? before, DateTime? after);
         int GetLastId();
+        string GetRandomJoke();
     }
 }

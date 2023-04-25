@@ -1,10 +1,13 @@
 ﻿using ConsoleApp7;
 using ConsoleApp8;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -16,15 +19,20 @@ class ClientProcessor : IClientProcessor
 {
     private string Login;
     private bool mute;
+    private Timer timer;
+    private int listenerPort;
+    private string botName;
 
     private IStorage storage;
     private ConcurrentBag<TcpClient> clients;
     private ConcurrentBag<string> logins;
+    private ConcurrentDictionary<int, string> clientLoginMap;
 
     public ClientProcessor(IStorage storage)
     {
         clients = new ConcurrentBag<TcpClient>();
         logins = new ConcurrentBag<string>();
+        clientLoginMap = new ConcurrentDictionary<int, string>();
         this.storage = storage;
     }
 
@@ -39,6 +47,7 @@ class ClientProcessor : IClientProcessor
     }
     public void Handshake(int port)
     {
+        listenerPort = port;
         var firstChatPort = 5000;
         var lastChatPort = 5020;
 
@@ -72,30 +81,91 @@ class ClientProcessor : IClientProcessor
         clients.Add(client);
     }
 
+    public void AddCleintLoginMap(int port, string login)
+    {
+        clientLoginMap.TryAdd(port, login);
+    }
+
     public void AddLogin(string login)
     {
         logins.Add(login);
+    }
+
+    public string GetBotName()
+    {
+        return botName;
     }
 
     public void SetStartLogin()
     {
         Console.WriteLine("Введите логин: ");
         Login = Console.ReadLine();
+
+        if (Login == "/butler")
+        {
+            botName = "butler";
+            timer = new Timer(
+                e => ButlerFunctionality(),
+                null,
+                TimeSpan.Zero,
+                TimeSpan.FromSeconds(5));
+        }
+        if (Login == "/weather")
+        {
+            botName = "weather";
+        }
+        if (Login == "/joker")
+        {
+            botName = "joker";
+        }
     }
 
     public void BroadcastMessage(string message)
     {
+        ConcurrentBag<TcpClient> newList = new ConcurrentBag<TcpClient>();
         foreach (var client in clients)
         {
-            NetworkStream stream = client.GetStream();
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            stream.Write(messageBytes, 0, messageBytes.Length);
+            if (client.Connected)
+            {
+                try
+                {
+                    NetworkStream stream = client.GetStream();
+                    byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+                    stream.Write(messageBytes, 0, messageBytes.Length);
+                    newList.Add(client);
+                } catch
+                {
+                    
+                }
+            }
+        }
+        if (!newList.SequenceEqual(clients))
+        {
+            clients = newList;
         }
     }
 
     public void SayLogin()
     {
-        BroadcastMessage($"Client connected with login {Login}");
+        BroadcastMessage($"Client connected with login {Login} and port {listenerPort}");
+    }
+
+    public void ButlerFunctionality()
+    {
+        Console.WriteLine("hello");
+        foreach (var client in clients)
+        {
+            try
+            {
+                client.GetStream().Write(new byte[0], 0, 0);
+            }
+            catch
+            {
+                clientLoginMap.TryGetValue(((IPEndPoint)client.Client.RemoteEndPoint).Port, out string login);
+                string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{"пока " + login}\"";
+                BroadcastMessage(refactorMessage);
+            }
+        }
     }
 
     public void StartChatting()
@@ -189,6 +259,14 @@ class ClientProcessor : IClientProcessor
                 }
 
                 storage.ReadHistory(count, before, after);
+            }
+            else if (Regex.IsMatch(line, @"^/weather$"))
+            {
+                BroadcastMessage("/weather");
+            }
+            else if (Regex.IsMatch(line, @"^/joke"))
+            {
+                BroadcastMessage("/joke");
             }
             else
             {

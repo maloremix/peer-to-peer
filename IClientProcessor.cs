@@ -16,7 +16,9 @@ namespace ConsoleApp8
         void SetStartLogin();
         void AddLogin(string login);
         void AddClient(TcpClient client);
+        void AddCleintLoginMap(int port, string login);
 
         string GetLogin();
+        string GetBotName();
     }
 }

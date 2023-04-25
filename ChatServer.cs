@@ -14,7 +14,7 @@ class ChatServer : IChatServer
 {
     private IClientProcessor clientProcсessor;
     private IStorage storage;
-
+    private DateTime messageTime;
     public ChatServer(IClientProcessor clientProcсessor, IStorage storage)
     {
         this.clientProcсessor = clientProcсessor;
@@ -38,17 +38,16 @@ class ChatServer : IChatServer
                 return port;
             }
         }
-
         return 0;
     }
 
-    private void HandleNewClientMessage(string newClientPort)
+    private void HandleNewClientMessage(string newClientPort, int ourPort)
     {
             TcpClient newClient = new TcpClient();
             newClient.Connect("localhost", int.Parse(newClientPort));
-        clientProcсessor.AddClient(newClient);
+            clientProcсessor.AddClient(newClient);
             NetworkStream streamLogin = newClient.GetStream();
-            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProcсessor.GetLogin());
+            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProcсessor.GetLogin() + " and port " + ourPort);
             streamLogin.Write(messageBytes, 0, messageBytes.Length);
     }
 
@@ -58,7 +57,7 @@ class ChatServer : IChatServer
 
         clientProcсessor.SetStartLogin();
         Console.WriteLine("Устанавливается соединение с другими клиентами...");
-        Thread listenerThread = new Thread(() =>
+        Thread listenerThread = new Thread(async () =>
         {
             TcpListener listener = new TcpListener(IPAddress.Any, port);
             listener.Start();
@@ -92,23 +91,66 @@ class ChatServer : IChatServer
                         Match match = regex.Match(message);
                         if (match.Success)
                         {
-                            HandleNewClientMessage(match.Groups[1].Value);
+                            HandleNewClientMessage(match.Groups[1].Value, port);
                             continue;
                         }
-                        Regex regexLogin = new Regex(@"login (\w+)");
+                        Regex regexLogin = new Regex(@"login (\S+) and port (\d+)");
                         Match matchLogin = regexLogin.Match(message);
                         if (matchLogin.Success)
                         {
                             Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
                             string clientLogin = matchLogin.Groups[1].Value;
+                            int clientPort = int.Parse(matchLogin.Groups[2].Value);
                             clientProcсessor.AddLogin(clientLogin);
+                            clientProcсessor.AddCleintLoginMap(clientPort, clientLogin);
+                            if (clientProcсessor.GetBotName() == "butler")
+                            {
+                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{"Привет " + clientLogin}\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageBot);
+                            }
                             continue;
                         }
-                        Regex regexLoginFrom = new Regex(@"Client connected with login (\w+)");
+                        Regex regexLoginFrom = new Regex(@"Client connected with login (\S+) and port (\d+)");
                         Match matchLoginFrom = regexLoginFrom.Match(message);
                         if (matchLoginFrom.Success)
                         {
-                            Console.WriteLine($"Подключен новый клиент: {matchLoginFrom.Groups[1].Value}");
+                            string clientLogin = matchLogin.Groups[1].Value;
+                            int clientPort = int.Parse(matchLogin.Groups[2].Value);
+                            clientProcсessor.AddCleintLoginMap(clientPort, clientLogin);
+                            Console.WriteLine($"Подключен новый клиент: {clientLogin}");
+                            if (clientProcсessor.GetBotName() == "butler")
+                            {
+                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{"Привет " + clientLogin}\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageBot);
+                            }
+                            continue;
+                        }
+
+                        Regex regexWeather = new Regex(@"^/weather$");
+                        Match matchWeather = regexWeather.Match(message);
+                        if (matchWeather.Success)
+                        {
+                            if (clientProcсessor.GetBotName() == "weather")
+                            {
+                                var weatherData = await WeatherClass.GetWeatherAsync("Voronezh");
+                                string weather = weatherData.MainWeather;
+                                double temperature = weatherData.Temperature;
+                                string messageWeather = $"Сейчас {weather}, температура {temperature}";
+                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{messageWeather}\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageBot);
+                            }
+                            continue;
+                        }
+                        Regex regexJoke = new Regex(@"^/joke$");
+                        Match matchJoke = regexJoke.Match(message);
+                        if (matchJoke.Success)
+                        {
+                            if (clientProcсessor.GetBotName() == "joker")
+                            {
+                                string joke = storage.GetRandomJoke();
+                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{joke}\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageBot);
+                            }
                             continue;
                         }
                         //bdStorage.WriteIntoStorage(message);
@@ -118,6 +160,19 @@ class ChatServer : IChatServer
                             Console.WriteLine(refactorMessage);
                             storage.WriteIntoStorage(message);
                         }
+                        if (clientProcсessor.GetBotName() == "joker")
+                        {
+                            TimeSpan timeElapsed = DateTime.Now.Subtract(messageTime); // сколько времени прошло с момента отправки сообщения
+                            if (timeElapsed.TotalMinutes > 5) // если прошло более 5 минут
+                            {
+                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"Что-то у вас тут скучно. Ловите анекдот\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageBot);
+                                string joke = storage.GetRandomJoke();
+                                string refactorMessageJoke = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{joke}\"";
+                                clientProcсessor.BroadcastMessage(refactorMessageJoke);
+                            }
+                        }
+                        messageTime = DateTime.Now;
                         //storage.WriteIntoConsole(refactorMessage);
                         //storage.WriteIntoFile(refactorMessage);
                     }

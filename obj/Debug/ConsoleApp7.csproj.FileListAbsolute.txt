@@ -65,3 +65,5 @@ C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Npgs
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Text.Encodings.Web.xml
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.Text.Json.xml
 C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\System.ValueTuple.xml
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Newtonsoft.Json.dll
+C:\Users\Administrator\Desktop\Interviews\ConsoleApp7\ConsoleApp7\bin\Debug\Newtonsoft.Json.xml
