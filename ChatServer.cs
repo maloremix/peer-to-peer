@@ -153,7 +153,6 @@ class ChatServer : IChatServer
                             }
                             continue;
                         }
-                        //bdStorage.WriteIntoStorage(message);
                         string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
                         if (!clientProcсessor.IsMute())
                         {
@@ -173,8 +172,6 @@ class ChatServer : IChatServer
                             }
                         }
                         messageTime = DateTime.Now;
-                        //storage.WriteIntoConsole(refactorMessage);
-                        //storage.WriteIntoFile(refactorMessage);
                     }
                 }
 
