@@ -1,6 +1,7 @@
 ﻿using ConsoleApp7;
 using ConsoleApp8;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -63,8 +65,15 @@ class ClientProcessor : IClientProcessor
             client.Connect("localhost", usedPort); // Устанавливаем соединение с хостом и портом
             clients.Add(client); // Добавляем клиента в список
             NetworkStream stream = client.GetStream();
-            byte[] messageBytes = Encoding.UTF8.GetBytes("Client connected with port " + port);
-            stream.Write(messageBytes, 0, messageBytes.Length);
+            var handshake = new Handshake()
+            {
+                Port = port,
+                MessageType = "Handshake"
+            };
+
+            var outputContent = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(handshake));
+            var outputContentLength = outputContent.Length;
+            stream.Write(outputContent, 0, outputContentLength);
         }
     }
 
@@ -130,8 +139,15 @@ class ClientProcessor : IClientProcessor
                 try
                 {
                     NetworkStream stream = client.GetStream();
-                    byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-                    stream.Write(messageBytes, 0, messageBytes.Length);
+                    var messageJSON = new Message()
+                    {
+                        Text = message,
+                        MessageType = "message"
+                    };
+
+                    var outputContent = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(messageJSON));
+                    var outputContentLength = outputContent.Length;
+                    stream.Write(outputContent, 0, outputContentLength);
                     newList.Add(client);
                 } catch
                 {
@@ -147,7 +163,30 @@ class ClientProcessor : IClientProcessor
 
     public void SayLogin()
     {
-        BroadcastMessage($"Client connected with login {Login} and port {listenerPort}");
+        var handshake = new UserInfo()
+        {
+            Login = Login,
+            Port = listenerPort,
+            MessageType = "UserInfo"
+        };
+
+        var outputContent = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(handshake));
+        var outputContentLength = outputContent.Length;
+        foreach (var client in clients)
+        {
+            if (client.Connected)
+            {
+                try
+                {
+                    NetworkStream stream = client.GetStream();
+                    stream.Write(outputContent, 0, outputContentLength);
+                }
+                catch
+                {
+
+                }
+            }
+        }
     }
 
     public void ButlerFunctionality()
@@ -164,6 +203,33 @@ class ClientProcessor : IClientProcessor
                 clientLoginMap.TryGetValue(((IPEndPoint)client.Client.RemoteEndPoint).Port, out string login);
                 string refactorMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {Login}[{storage.GetLastId()}]: \"{"пока " + login}\"";
                 BroadcastMessage(refactorMessage);
+            }
+        }
+    }
+
+    public void botBroadcastMessage(string command)
+    {
+        foreach (var client in clients)
+        {
+            if (client.Connected)
+            {
+                try
+                {
+                    NetworkStream stream = client.GetStream();
+                    var messageJSON = new Bot()
+                    {
+                        botCommand = command,
+                        MessageType = "Bot"
+                    };
+
+                    var outputContent = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(messageJSON));
+                    var outputContentLength = outputContent.Length;
+                    stream.Write(outputContent, 0, outputContentLength);
+                }
+                catch
+                {
+
+                }
             }
         }
     }
@@ -262,11 +328,11 @@ class ClientProcessor : IClientProcessor
             }
             else if (Regex.IsMatch(line, @"^/weather$"))
             {
-                BroadcastMessage("/weather");
+                botBroadcastMessage("/weather");
             }
             else if (Regex.IsMatch(line, @"^/joke"))
             {
-                BroadcastMessage("/joke");
+                botBroadcastMessage("/joke");
             }
             else
             {

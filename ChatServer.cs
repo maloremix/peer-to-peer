@@ -1,8 +1,10 @@
 ﻿using ConsoleApp7;
 using ConsoleApp8;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -41,14 +43,23 @@ class ChatServer : IChatServer
         return 0;
     }
 
-    private void HandleNewClientMessage(string newClientPort, int ourPort)
+    private void HandleNewClientMessage(int newClientPort, int ourPort)
     {
             TcpClient newClient = new TcpClient();
-            newClient.Connect("localhost", int.Parse(newClientPort));
+            newClient.Connect("localhost", newClientPort);
             clientProcсessor.AddClient(newClient);
+            var handshake = new UserInfo()
+            {
+                Login = clientProcсessor.GetLogin(),
+                Port = ourPort,
+                MessageType = "UserInfo"
+            };
+            
+
+            var outputContent = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(handshake));
+            var outputContentLength = outputContent.Length;
             NetworkStream streamLogin = newClient.GetStream();
-            byte[] messageBytes = Encoding.UTF8.GetBytes("login " + clientProcсessor.GetLogin() + " and port " + ourPort);
-            streamLogin.Write(messageBytes, 0, messageBytes.Length);
+            streamLogin.Write(outputContent, 0, outputContentLength);
     }
 
     public void Start()
@@ -86,21 +97,23 @@ class ChatServer : IChatServer
                         {
                             break;
                         }
+
                         string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        Regex regex = new Regex(@"Client connected with port (\d+)");
-                        Match match = regex.Match(message);
-                        if (match.Success)
+
+                        var Type = JsonConvert.DeserializeObject<Type>(message);
+
+                        if (Type.MessageType == "Handshake")
                         {
-                            HandleNewClientMessage(match.Groups[1].Value, port);
+                            var handshakeObject = JsonConvert.DeserializeObject<Handshake>(message);
+                            HandleNewClientMessage(handshakeObject.Port, port);
                             continue;
                         }
-                        Regex regexLogin = new Regex(@"login (\S+) and port (\d+)");
-                        Match matchLogin = regexLogin.Match(message);
-                        if (matchLogin.Success)
+                        if (Type.MessageType == "UserInfo")
                         {
-                            Console.WriteLine($"Подключен новый клиент: {matchLogin.Groups[1].Value}");
-                            string clientLogin = matchLogin.Groups[1].Value;
-                            int clientPort = int.Parse(matchLogin.Groups[2].Value);
+                            var userInfoObject = JsonConvert.DeserializeObject<UserInfo>(message);
+                            Console.WriteLine($"Подключен новый клиент: {userInfoObject.Login}");
+                            string clientLogin = userInfoObject.Login;
+                            int clientPort = userInfoObject.Port;
                             clientProcсessor.AddLogin(clientLogin);
                             clientProcсessor.AddCleintLoginMap(clientPort, clientLogin);
                             if (clientProcсessor.GetBotName() == "butler")
@@ -110,27 +123,12 @@ class ChatServer : IChatServer
                             }
                             continue;
                         }
-                        Regex regexLoginFrom = new Regex(@"Client connected with login (\S+) and port (\d+)");
-                        Match matchLoginFrom = regexLoginFrom.Match(message);
-                        if (matchLoginFrom.Success)
-                        {
-                            string clientLogin = matchLogin.Groups[1].Value;
-                            int clientPort = int.Parse(matchLogin.Groups[2].Value);
-                            clientProcсessor.AddCleintLoginMap(clientPort, clientLogin);
-                            Console.WriteLine($"Подключен новый клиент: {clientLogin}");
-                            if (clientProcсessor.GetBotName() == "butler")
-                            {
-                                string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{"Привет " + clientLogin}\"";
-                                clientProcсessor.BroadcastMessage(refactorMessageBot);
-                            }
-                            continue;
-                        }
 
-                        Regex regexWeather = new Regex(@"^/weather$");
-                        Match matchWeather = regexWeather.Match(message);
-                        if (matchWeather.Success)
+                        if (Type.MessageType == "Bot")
                         {
-                            if (clientProcсessor.GetBotName() == "weather")
+                            var botObject = JsonConvert.DeserializeObject<Bot>(message);
+                            
+                            if (botObject.botCommand == "/weather" && clientProcсessor.GetBotName() == "weather")
                             {
                                 var weatherData = await WeatherClass.GetWeatherAsync("Voronezh");
                                 string weather = weatherData.MainWeather;
@@ -139,13 +137,8 @@ class ChatServer : IChatServer
                                 string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{messageWeather}\"";
                                 clientProcсessor.BroadcastMessage(refactorMessageBot);
                             }
-                            continue;
-                        }
-                        Regex regexJoke = new Regex(@"^/joke$");
-                        Match matchJoke = regexJoke.Match(message);
-                        if (matchJoke.Success)
-                        {
-                            if (clientProcсessor.GetBotName() == "joker")
+
+                            if (botObject.botCommand == "/joke" && clientProcсessor.GetBotName() == "joker")
                             {
                                 string joke = storage.GetRandomJoke();
                                 string refactorMessageBot = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.ff}] {clientProcсessor.GetLogin()}[{storage.GetLastId()}]: \"{joke}\"";
@@ -153,11 +146,13 @@ class ChatServer : IChatServer
                             }
                             continue;
                         }
-                        string refactorMessage = Regex.Replace(message, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
+
+                        var messageObject = JsonConvert.DeserializeObject<Message>(message);
+                        string refactorMessage = Regex.Replace(messageObject.Text, @"\[\d+\]", "[" + storage.GetLastId().ToString() + "]");
                         if (!clientProcсessor.IsMute())
                         {
                             Console.WriteLine(refactorMessage);
-                            storage.WriteIntoStorage(message);
+                            storage.WriteIntoStorage(refactorMessage);
                         }
                         if (clientProcсessor.GetBotName() == "joker")
                         {
@@ -183,4 +178,35 @@ class ChatServer : IChatServer
         clientProcсessor.Handshake(port);
         clientProcсessor.StartChatting();
     }
+}
+
+class Type
+{
+    public string MessageType;
+}
+
+class UserInfo
+{
+    public string Login { get; set; }
+
+    public int Port { get; set; }
+    public string MessageType;
+}
+
+class Handshake
+{
+    public int Port { get; set; }
+    public string MessageType;
+}
+
+class Message
+{
+    public string Text { get; set; }
+    public string MessageType;
+}
+
+class Bot
+{
+    public string botCommand { get; set; }
+    public string MessageType;
 }
